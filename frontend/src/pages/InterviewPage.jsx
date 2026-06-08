@@ -68,6 +68,8 @@ function InterviewPage() {
   const [behavioralFeedback, setBehavioralFeedback] = useState(null);
 
   const [behavioralQuestionIndex, setBehavioralQuestionIndex] = useState(0);
+  
+  const [resumeBehavioralQuestions, setResumeBehavioralQuestions] = useState([]);
 
   const [behavioralCompleted, setBehavioralCompleted] = useState(false);
 
@@ -137,14 +139,30 @@ function InterviewPage() {
   const generateQuestion = async () => {
     try {
       if (interviewType === "Behavioral") {
-        setQuestion({
-          type: "behavioral",
-          title: "Behavioral Interview",
-          problem_statement: behavioralQuestions[behavioralQuestionIndex],
-        });
+  const response = await api.get(
+    "/resume-behavioral-questions",
+    {
+      params: {
+        user_id: storedUser.id,
+      },
+    },
+  );
 
-        return;
-      }
+  setResumeBehavioralQuestions(
+    response.data.questions,
+  );
+
+  setBehavioralQuestionIndex(0);
+
+  setQuestion({
+    type: "behavioral",
+    title: "Behavioral Interview",
+    problem_statement:
+      response.data.questions[0],
+  });
+
+  return;
+}
       setGeneratingQuestion(true);
       const response = await api.get("/generate-question", {
         params: {
@@ -435,13 +453,13 @@ function InterviewPage() {
       console.log(behavioralAnswers);
       const nextIndex = behavioralQuestionIndex + 1;
 
-      if (nextIndex < behavioralQuestions.length) {
+      if (nextIndex < resumeBehavioralQuestions.length) {
         setBehavioralQuestionIndex(nextIndex);
 
         setQuestion({
           type: "behavioral",
           title: "Behavioral Interview",
-          problem_statement: behavioralQuestions[nextIndex],
+          problem_statement: resumeBehavioralQuestions[nextIndex],
         });
 
         setBehavioralAnswer("");
@@ -475,6 +493,27 @@ function InterviewPage() {
       setBehavioralCompleted(true);
     }
   };
+
+  const fetchResumeBehavioralQuestions = async () => {
+  try {
+    const response = await api.get(
+      "/resume-behavioral-questions",
+      {
+        params: {
+          user_id: storedUser.id,
+        },
+      },
+    );
+
+    setResumeBehavioralQuestions(
+      response.data.questions,
+    );
+
+    console.log(response.data.questions);
+  } catch (error) {
+    console.log(error);
+  }
+};
   if (behavioralCompleted) {
     return (
       <div className="p-10">
@@ -548,7 +587,7 @@ function InterviewPage() {
         <div className="mb-4">
           <p className="text-gray-600 font-semibold">
             Question {behavioralQuestionIndex + 1} /{" "}
-            {behavioralQuestions.length}
+            {resumeBehavioralQuestions.length}
           </p>
         </div>
         <div className="bg-white p-6 rounded shadow">
