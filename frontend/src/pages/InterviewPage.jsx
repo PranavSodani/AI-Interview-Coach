@@ -11,8 +11,6 @@ import StartInterviewCard from "../components/StartInterviewCard";
 function InterviewPage() {
   const storedUser = JSON.parse(localStorage.getItem("user"));
 
-  console.log(storedUser);
-
   const navigate = useNavigate();
 
   const [session, setSession] = useState(null);
@@ -61,11 +59,7 @@ function InterviewPage() {
 
   const [recognition, setRecognition] = useState(null);
 
-  const [voiceFeedback, setVoiceFeedback] = useState("");
-
   const [behavioralAnswer, setBehavioralAnswer] = useState("");
-
-  const [behavioralFeedback, setBehavioralFeedback] = useState(null);
 
   const [behavioralQuestionIndex, setBehavioralQuestionIndex] = useState(0);
   
@@ -101,8 +95,6 @@ function InterviewPage() {
           user_id: storedUser.id,
         },
       });
-
-      console.log(response.data);
       if (response.data) {
         setResumeUploaded(true);
 
@@ -245,8 +237,6 @@ function InterviewPage() {
 
       setSubmissionResult(response.data);
 
-      console.log(response.data);
-
       setDifficulty(response.data.next_difficulty);
     } catch (error) {
       setSubmittingSolution(false);
@@ -296,7 +286,6 @@ function InterviewPage() {
           },
         },
       );
-      console.log(response.data);
 
       setResumeUploaded(true);
       setResumeFileName(response.data.file_name);
@@ -411,109 +400,68 @@ function InterviewPage() {
       recognition.stop();
     }
   };
-  const behavioralQuestions = [
-    "Tell me about yourself.",
-    "Why do you want to work here?",
-    "Tell me about a challenging project.",
-    "Describe a time you faced a conflict in a team.",
-    "What is your biggest strength?",
-  ];
-  const generateFinalBehavioralReport = async () => {
-    console.log("FUNCTION CALLED");
-    try {
-      const response = await api.post("/final-behavioral-report", {
-        answers: behavioralAnswers,
-      });
-
-      console.log(response.data);
-
-      setFinalBehavioralReport(response.data);
-      setBehavioralCompleted(true);
-    } catch (error) {
-      console.log(error);
-    }
-  };
   const evaluateBehavioralAnswer = async () => {
-    try {
-      const response = await api.post("/evaluate-behavioral-answer", {
+  try {
+    const response = await api.post(
+      "/evaluate-behavioral-answer",
+      {
         question: question.problem_statement,
         answer: behavioralAnswer,
-      });
-      console.log(response.data);
-      setBehavioralFeedback(response.data);
-      console.log("Saving Answer:", behavioralAnswer);
-      setBehavioralAnswers((prev) => [
-        ...prev,
-        {
-          question: question.problem_statement,
-          answer: behavioralAnswer,
-          feedback: response.data,
-        },
-      ]);
-      console.log(behavioralAnswers);
-      const nextIndex = behavioralQuestionIndex + 1;
+      },
+    );
 
-      if (nextIndex < resumeBehavioralQuestions.length) {
-        setBehavioralQuestionIndex(nextIndex);
+    const updatedAnswers = [
+      ...behavioralAnswers,
+      {
+        question: question.problem_statement,
+        answer: behavioralAnswer,
+        feedback: response.data,
+      },
+    ];
 
-        setQuestion({
-          type: "behavioral",
-          title: "Behavioral Interview",
-          problem_statement: resumeBehavioralQuestions[nextIndex],
-        });
+    setBehavioralAnswers(updatedAnswers);
 
-        setBehavioralAnswer("");
-        setTranscript("");
-        setBehavioralFeedback(null);
-      } else {
-        console.log("GENERATING FINAL REPORT")
-        await generateFinalBehavioralReport();
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  };
+    const nextIndex =
+      behavioralQuestionIndex + 1;
 
-  const nextBehavioralQuestion = async () => {
-    if (behavioralQuestionIndex < behavioralQuestions.length - 1) {
-      const nextIndex = behavioralQuestionIndex + 1;
-
-      setBehavioralQuestionIndex(nextIndex);
+    if (
+      nextIndex <
+      resumeBehavioralQuestions.length
+    ) {
+      setBehavioralQuestionIndex(
+        nextIndex,
+      );
 
       setQuestion({
         type: "behavioral",
         title: "Behavioral Interview",
-        problem_statement: behavioralQuestions[nextIndex],
+        problem_statement:
+          resumeBehavioralQuestions[
+            nextIndex
+          ],
       });
 
       setBehavioralAnswer("");
-      setBehavioralFeedback(null);
+      setTranscript("");
     } else {
-      await generateFinalBehavioralReport();
+      const finalResponse = await api.post(
+        "/final-behavioral-report",
+        {
+          answers: updatedAnswers,
+        },
+      );
+
+      setFinalBehavioralReport(
+        finalResponse.data,
+      );
+
       setBehavioralCompleted(true);
     }
-  };
-
-  const fetchResumeBehavioralQuestions = async () => {
-  try {
-    const response = await api.get(
-      "/resume-behavioral-questions",
-      {
-        params: {
-          user_id: storedUser.id,
-        },
-      },
-    );
-
-    setResumeBehavioralQuestions(
-      response.data.questions,
-    );
-
-    console.log(response.data.questions);
   } catch (error) {
     console.log(error);
   }
 };
+
   if (behavioralCompleted) {
     return (
       <div className="p-10">
