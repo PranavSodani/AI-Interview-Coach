@@ -73,6 +73,10 @@ function InterviewPage() {
 
   const [isListening, setIsListening] = useState(false);
 
+  const [followUpQuestion, setFollowUpQuestion] = useState(null);
+
+const [isFollowUpMode, setIsFollowUpMode] = useState(false);
+
   const startSession = async () => {
     try {
       const response = await api.post("/start-session", {
@@ -421,42 +425,82 @@ function InterviewPage() {
 
     setBehavioralAnswers(updatedAnswers);
 
-    const nextIndex =
-      behavioralQuestionIndex + 1;
+    // If we're answering a follow-up question
+    if (isFollowUpMode) {
+      const nextIndex = behavioralQuestionIndex + 1;
 
-    if (
-      nextIndex <
-      resumeBehavioralQuestions.length
-    ) {
-      setBehavioralQuestionIndex(
-        nextIndex,
-      );
+      setIsFollowUpMode(false);
+      setFollowUpQuestion(null);
 
-      setQuestion({
-        type: "behavioral",
-        title: "Behavioral Interview",
-        problem_statement:
-          resumeBehavioralQuestions[
-            nextIndex
-          ],
-      });
+      if (
+        nextIndex <
+        resumeBehavioralQuestions.length
+      ) {
+        setBehavioralQuestionIndex(
+          nextIndex,
+        );
 
-      setBehavioralAnswer("");
-      setTranscript("");
-    } else {
-      const finalResponse = await api.post(
-        "/final-behavioral-report",
-        {
-          answers: updatedAnswers,
-        },
-      );
+        setQuestion({
+          type: "behavioral",
+          title: "Behavioral Interview",
+          problem_statement:
+            resumeBehavioralQuestions[
+              nextIndex
+            ],
+        });
 
-      setFinalBehavioralReport(
-        finalResponse.data,
-      );
+        setBehavioralAnswer("");
+        setTranscript("");
+      } else {
+        const finalResponse = await api.post(
+          "/final-behavioral-report",
+          {
+            answers: updatedAnswers,
+          },
+        );
 
-      setBehavioralCompleted(true);
+        setFinalBehavioralReport(
+          finalResponse.data,
+        );
+
+        setBehavioralCompleted(true);
+      }
+
+      return;
     }
+
+    // First answer of a resume question
+    await generateFollowUpQuestion(
+      question.problem_statement,
+      behavioralAnswer,
+    );
+
+    setIsFollowUpMode(true);
+
+    setBehavioralAnswer("");
+    setTranscript("");
+  } catch (error) {
+    console.log(error);
+  }
+};
+const generateFollowUpQuestion = async (
+  question,
+  answer,
+) => {
+  try {
+    const response = await api.post(
+      "/generate-follow-up-question",
+      {
+        question,
+        answer,
+      },
+    );
+
+    setFollowUpQuestion(
+      response.data.follow_up_question,
+    );
+
+    setIsFollowUpMode(true);
   } catch (error) {
     console.log(error);
   }
@@ -539,9 +583,17 @@ function InterviewPage() {
           </p>
         </div>
         <div className="bg-white p-6 rounded shadow">
-          <h3 className="text-xl font-bold mb-4">
-            {question.problem_statement}
-          </h3>
+          {isFollowUpMode && (
+  <div className="mb-3 text-orange-600 font-bold">
+    Follow-Up Question
+  </div>
+)}
+
+<h3 className="text-xl font-bold mb-4">
+  {isFollowUpMode
+    ? followUpQuestion
+    : question.problem_statement}
+</h3>
           <div className="flex gap-4 mb-4">
             <button
               onClick={startListening}

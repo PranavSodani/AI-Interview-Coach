@@ -155,3 +155,43 @@ def generate_final_behavioral_report(answers):
     parsed_response = json.loads(response_text)
 
     return parsed_response
+
+def generate_follow_up_question(
+        question: str,
+        answer: str
+):
+    prompt = f"""
+    You are a senior interviewer.
+
+    Original Question:
+    {question}
+
+    Candidate Answer:
+    {answer}
+
+    Generate ONE follow-up question that helps
+    the interviewer understand the answer better.
+
+    Return valid JSON only:
+
+    {{
+        "follow_up_question": "..."
+    }}
+    """
+
+    response = client.chat.completions.create(
+        model = "openai/gpt-3.5-turbo",
+        max_tokens=100,
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
+    )
+
+    response_text = response.choices[0].message.content
+
+    parsed_reponse = json.loads(response_text)
+
+    return parsed_reponse
