@@ -8,7 +8,6 @@ from sqlalchemy import (
 
 from database import Base
 
-
 class CompanyQuestion(Base):
 
     __tablename__ = "company_questions"

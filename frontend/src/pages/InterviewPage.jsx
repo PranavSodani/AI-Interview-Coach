@@ -11,8 +11,6 @@ import StartInterviewCard from "../components/StartInterviewCard";
 function InterviewPage() {
   const storedUser = JSON.parse(localStorage.getItem("user"));
 
-  console.log(storedUser);
-
   const navigate = useNavigate();
 
   const [session, setSession] = useState(null);
@@ -61,13 +59,13 @@ function InterviewPage() {
 
   const [recognition, setRecognition] = useState(null);
 
-  const [voiceFeedback, setVoiceFeedback] = useState("");
-
   const [behavioralAnswer, setBehavioralAnswer] = useState("");
 
-  const [behavioralFeedback, setBehavioralFeedback] = useState(null);
-
   const [behavioralQuestionIndex, setBehavioralQuestionIndex] = useState(0);
+
+  const [resumeBehavioralQuestions, setResumeBehavioralQuestions] = useState(
+    [],
+  );
 
   const [behavioralCompleted, setBehavioralCompleted] = useState(false);
 
@@ -76,6 +74,21 @@ function InterviewPage() {
   const [finalBehavioralReport, setFinalBehavioralReport] = useState(null);
 
   const [isListening, setIsListening] = useState(false);
+
+  const [followUpQuestion, setFollowUpQuestion] = useState(null);
+
+  const [isFollowUpMode, setIsFollowUpMode] = useState(false);
+
+  const [candidateProfile, setCandidateProfile] = useState({
+    communication: 5,
+    leadership: 5,
+    confidence: 5,
+    strengths: [],
+    weaknesses: [],
+    answerCount: 0,
+    leadershipWeaknessCount: 0,
+    adaptiveQuestionAsked: false,
+  });
 
   const startSession = async () => {
     try {
@@ -99,8 +112,6 @@ function InterviewPage() {
           user_id: storedUser.id,
         },
       });
-
-      console.log(response.data);
       if (response.data) {
         setResumeUploaded(true);
 
@@ -137,10 +148,20 @@ function InterviewPage() {
   const generateQuestion = async () => {
     try {
       if (interviewType === "Behavioral") {
+        const response = await api.get("/resume-behavioral-questions", {
+          params: {
+            user_id: storedUser.id,
+          },
+        });
+
+        setResumeBehavioralQuestions(response.data.questions);
+
+        setBehavioralQuestionIndex(0);
+
         setQuestion({
           type: "behavioral",
           title: "Behavioral Interview",
-          problem_statement: behavioralQuestions[behavioralQuestionIndex],
+          problem_statement: response.data.questions[0],
         });
 
         return;
@@ -205,6 +226,18 @@ function InterviewPage() {
       console.log(error);
     }
   };
+  const generateBehavioralAdaptiveQuestion = async () => {
+    try {
+      const response = await api.post("/generate-adaptive-question", {
+        weaknesses: candidateProfile.weaknesses,
+      });
+
+      return response.data.question;
+    } catch (error) {
+      console.log(error);
+      return null;
+    }
+  };
 
   const submitSolution = async () => {
     console.log(session);
@@ -226,8 +259,6 @@ function InterviewPage() {
       setSubmittingSolution(false);
 
       setSubmissionResult(response.data);
-
-      console.log(response.data);
 
       setDifficulty(response.data.next_difficulty);
     } catch (error) {
@@ -278,7 +309,6 @@ function InterviewPage() {
           },
         },
       );
-      console.log(response.data);
 
       setResumeUploaded(true);
       setResumeFileName(response.data.file_name);
@@ -393,27 +423,20 @@ function InterviewPage() {
       recognition.stop();
     }
   };
-  const behavioralQuestions = [
-    "Tell me about yourself.",
-    "Why do you want to work here?",
-    "Tell me about a challenging project.",
-    "Describe a time you faced a conflict in a team.",
-    "What is your biggest strength?",
-  ];
-  const generateFinalBehavioralReport = async () => {
-    console.log("FUNCTION CALLED");
-    try {
-      const response = await api.post("/final-behavioral-report", {
-        answers: behavioralAnswers,
-      });
+  const getAdaptiveQuestion = async () => {
+    if (
+      candidateProfile.leadershipWeaknessCount >= 2 &&
+      !candidateProfile.adaptiveQuestionAsked
+    ) {
+      setCandidateProfile((prev) => ({
+        ...prev,
+        adaptiveQuestionAsked: true,
+      }));
 
-      console.log(response.data);
-
-      setFinalBehavioralReport(response.data);
-      setBehavioralCompleted(true);
-    } catch (error) {
-      console.log(error);
+      return await generateBehavioralAdaptiveQuestion();
     }
+
+    return null;
   };
   const evaluateBehavioralAnswer = async () => {
     try {
@@ -421,60 +444,96 @@ function InterviewPage() {
         question: question.problem_statement,
         answer: behavioralAnswer,
       });
-      console.log(response.data);
-      setBehavioralFeedback(response.data);
-      console.log("Saving Answer:", behavioralAnswer);
-      setBehavioralAnswers((prev) => [
+      setCandidateProfile((prev) => ({
         ...prev,
+
+        answerCount: prev.answerCount + 1,
+
+        leadershipWeaknessCount: response.data.improvements
+          .toLowerCase()
+          .includes("leadership")
+          ? prev.leadershipWeaknessCount + 1
+          : prev.leadershipWeaknessCount,
+
+        strengths: [...prev.strengths, response.data.strengths],
+
+        weaknesses: [...prev.weaknesses, response.data.improvements],
+      }));
+
+      const updatedAnswers = [
+        ...behavioralAnswers,
         {
           question: question.problem_statement,
           answer: behavioralAnswer,
           feedback: response.data,
         },
-      ]);
-      console.log(behavioralAnswers);
-      const nextIndex = behavioralQuestionIndex + 1;
+      ];
 
-      if (nextIndex < behavioralQuestions.length) {
-        setBehavioralQuestionIndex(nextIndex);
+      setBehavioralAnswers(updatedAnswers);
 
-        setQuestion({
-          type: "behavioral",
-          title: "Behavioral Interview",
-          problem_statement: behavioralQuestions[nextIndex],
-        });
+      // If we're answering a follow-up question
+      if (isFollowUpMode) {
+        const nextIndex = behavioralQuestionIndex + 1;
 
-        setBehavioralAnswer("");
-        setTranscript("");
-        setBehavioralFeedback(null);
-      } else {
-        console.log("GENERATING FINAL REPORT")
-        await generateFinalBehavioralReport();
+        setIsFollowUpMode(false);
+        setFollowUpQuestion(null);
+
+        if (nextIndex < resumeBehavioralQuestions.length) {
+          const adaptiveQuestion = await getAdaptiveQuestion();
+
+          setBehavioralQuestionIndex(nextIndex);
+
+          setQuestion({
+            type: "behavioral",
+            title: "Behavioral Interview",
+            problem_statement:
+              adaptiveQuestion || resumeBehavioralQuestions[nextIndex],
+          });
+
+          setBehavioralAnswer("");
+          setTranscript("");
+        } else {
+          const finalResponse = await api.post("/final-behavioral-report", {
+            answers: updatedAnswers,
+          });
+
+          setFinalBehavioralReport(finalResponse.data);
+
+          setBehavioralCompleted(true);
+        }
+
+        return;
       }
+
+      // First answer of a resume question
+      await generateFollowUpQuestion(
+        question.problem_statement,
+        behavioralAnswer,
+      );
+
+      setIsFollowUpMode(true);
+
+      setBehavioralAnswer("");
+      setTranscript("");
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  const generateFollowUpQuestion = async (question, answer) => {
+    try {
+      const response = await api.post("/generate-follow-up-question", {
+        question,
+        answer,
+      });
+
+      setFollowUpQuestion(response.data.follow_up_question);
+
+      setIsFollowUpMode(true);
     } catch (error) {
       console.log(error);
     }
   };
 
-  const nextBehavioralQuestion = async () => {
-    if (behavioralQuestionIndex < behavioralQuestions.length - 1) {
-      const nextIndex = behavioralQuestionIndex + 1;
-
-      setBehavioralQuestionIndex(nextIndex);
-
-      setQuestion({
-        type: "behavioral",
-        title: "Behavioral Interview",
-        problem_statement: behavioralQuestions[nextIndex],
-      });
-
-      setBehavioralAnswer("");
-      setBehavioralFeedback(null);
-    } else {
-      await generateFinalBehavioralReport();
-      setBehavioralCompleted(true);
-    }
-  };
   if (behavioralCompleted) {
     return (
       <div className="p-10">
@@ -548,12 +607,19 @@ function InterviewPage() {
         <div className="mb-4">
           <p className="text-gray-600 font-semibold">
             Question {behavioralQuestionIndex + 1} /{" "}
-            {behavioralQuestions.length}
+            {resumeBehavioralQuestions.length}
           </p>
         </div>
+
         <div className="bg-white p-6 rounded shadow">
+          {isFollowUpMode && (
+            <div className="mb-3 text-orange-600 font-bold">
+              Follow-Up Question
+            </div>
+          )}
+
           <h3 className="text-xl font-bold mb-4">
-            {question.problem_statement}
+            {isFollowUpMode ? followUpQuestion : question.problem_statement}
           </h3>
           <div className="flex gap-4 mb-4">
             <button

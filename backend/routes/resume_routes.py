@@ -11,7 +11,8 @@ from services.resume_service import (
     save_resume,
     extract_resume_profile,
     get_starting_difficulty,
-    get_latest_resume
+    get_latest_resume,
+    generate_resume_behavioral_questions
 )
 
 router = APIRouter()
@@ -90,4 +91,25 @@ def get_latest_resume_route(
     return {
         "resume_id": resume.id,
         "file_name": resume.file_name
+    }
+
+@router.get("/resume-behavioral-questions")
+def generate_resume_behavioral_questions_route(
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    resume = get_latest_resume(
+        user_id,
+        db
+    )
+
+    if not resume: 
+        return {
+            "questions": []
+        }
+    
+    questions = generate_resume_behavioral_questions(resume.extracted_text)
+
+    return {
+        "questions": questions
     }

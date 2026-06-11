@@ -173,3 +173,48 @@ def get_latest_resume(
         )
         .first()
     )
+
+def generate_resume_behavioral_questions(
+        resume_text: str
+):
+    prompt = f"""
+    You are a senior interviewer.
+
+    Resume:
+
+    {resume_text}
+
+    Generate 5 personalized behavioral interview questions.
+
+    Questions should be based on:
+    - Projects
+    - Experience
+    - Skills
+
+    Return valid JSON only:
+
+    {{
+        "questions": [
+            "...",
+            "...",
+            "...",
+            "...",
+            "..."
+        ]
+    }}
+    """
+
+    response = client.chat.completions.create(
+        model="openai/gpt-3.5-turbo",
+        max_tokens=300,
+        messages=[{
+            "role": "user",
+            "content": prompt
+        }]
+    )
+
+    response_text = response.choices[0].message.content
+
+    parsed_reponse = json.loads(response_text)
+    return parsed_reponse["questions"]
+    
