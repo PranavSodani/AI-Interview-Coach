@@ -195,3 +195,42 @@ def generate_follow_up_question(
     parsed_reponse = json.loads(response_text)
 
     return parsed_reponse
+
+def generate_adaptive_question(
+        weaknesses: int
+):
+    prompt = f"""
+    You are a senior interviewer.
+
+    Candidate Weaknesses:
+
+    {weaknesses}
+
+    Generate ONE behavioral interview question
+    that helps evaluate or improve the weakest area.
+
+    Return valid JSON only:
+
+    {{
+        "question": "..."
+    }}
+    """
+
+    response = client.chat.completions.create(
+    model="openai/gpt-3.5-turbo",
+    max_tokens=150,
+    messages=[
+        {
+            "role": "user",
+            "content": prompt
+        }
+    ]
+)
+
+    response_text = response.choices[0].message.content
+
+    parsed_response = json.loads(
+        response_text
+    )
+
+    return parsed_response

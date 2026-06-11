@@ -23,8 +23,10 @@ from services import question_service
 from models.question_model import Question
 
 from services.hint_service import (
-    evaluate_behavioral_answer, generate_final_behavioral_report,
-    generate_follow_up_question
+    evaluate_behavioral_answer,
+    generate_final_behavioral_report,
+    generate_follow_up_question,
+    generate_adaptive_question
 )
 
 router = APIRouter()
@@ -100,3 +102,13 @@ def generate_follow_up_question_route(
     )
 
     return result;
+
+@router.post("/generate-adaptive-question")
+def generate_adaptive_question_route(
+    data: dict
+):
+    result = generate_adaptive_question(
+        data["weaknesses"]
+    )
+
+    return result
