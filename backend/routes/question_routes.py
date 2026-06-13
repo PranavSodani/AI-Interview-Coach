@@ -108,6 +108,7 @@ def generate_adaptive_question_route(
     data: dict
 ):
     result = generate_adaptive_question(
+        data["weakness_type"],
         data["weaknesses"]
     )
 
