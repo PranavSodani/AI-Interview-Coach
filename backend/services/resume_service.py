@@ -90,7 +90,7 @@ def extract_resume_profile(
     response = client.chat.completions.create(
 
         model="openai/gpt-3.5-turbo",
-        max_tokens=500,
+        max_tokens=1200,
         response_format={
             "type": "json_object"
         },
