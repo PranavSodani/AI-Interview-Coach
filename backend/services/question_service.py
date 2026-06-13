@@ -367,6 +367,7 @@ def generate_question(
 
                 model=
                 "openai/gpt-3.5-turbo",
+                max_tokens=500,
 
                 response_format={
                     "type":

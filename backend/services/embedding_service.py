@@ -24,7 +24,7 @@ def generate_embedding(text):
 
             model=
             "text-embedding-3-small",
-
+            max_tokens=500,
             input=text
         )
     )
