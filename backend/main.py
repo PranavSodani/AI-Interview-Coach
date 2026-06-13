@@ -50,8 +50,10 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=[
+    "http://localhost:5173",
+    "https://ai-interview-coach-iirt88uyo-pranav-sodani-s-projects.vercel.app",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
