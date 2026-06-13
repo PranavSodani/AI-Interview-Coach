@@ -89,9 +89,6 @@ def generate_question(
 
             difficulty = "MEDIUM"
 
-    print(latest_resume)
-    if latest_resume:
-        print(latest_resume.file_name)
     print("USER ID:", user_id)
     
     comfortable_topics_list = [
