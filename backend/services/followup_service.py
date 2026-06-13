@@ -45,6 +45,7 @@ def generate_followup_question(
 
     response = client.chat.completions.create(
         model="openai/gpt-3.5-turbo",
+        max_tokens=500,
         messages=[
             {
                 "role":"user",
