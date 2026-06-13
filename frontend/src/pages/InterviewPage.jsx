@@ -87,6 +87,8 @@ function InterviewPage() {
     weaknesses: [],
     answerCount: 0,
     leadershipWeaknessCount: 0,
+    communicationWeaknessCount: 0,
+    confidenceWeaknessCount: 0,
     adaptiveQuestionAsked: false,
   });
 
@@ -226,11 +228,17 @@ function InterviewPage() {
       console.log(error);
     }
   };
-  const generateBehavioralAdaptiveQuestion = async () => {
+  const generateBehavioralAdaptiveQuestion =
+  async (weaknessType) => {
     try {
-      const response = await api.post("/generate-adaptive-question", {
-        weaknesses: candidateProfile.weaknesses,
-      });
+      const response = await api.post(
+        "/generate-adaptive-question",
+        {
+          weakness_type: weaknessType,
+          weaknesses:
+            candidateProfile.weaknesses,
+        },
+      );
 
       return response.data.question;
     } catch (error) {
@@ -424,19 +432,34 @@ function InterviewPage() {
     }
   };
   const getAdaptiveQuestion = async () => {
-    if (
-      candidateProfile.leadershipWeaknessCount >= 2 &&
-      !candidateProfile.adaptiveQuestionAsked
-    ) {
-      setCandidateProfile((prev) => ({
-        ...prev,
-        adaptiveQuestionAsked: true,
-      }));
-
-      return await generateBehavioralAdaptiveQuestion();
+    if (candidateProfile.adaptiveQuestionAsked) {
+      return null;
     }
 
-    return null;
+    const weaknessScores = {
+      leadership: candidateProfile.leadershipWeaknessCount,
+
+      communication: candidateProfile.communicationWeaknessCount,
+
+      confidence: candidateProfile.confidenceWeaknessCount,
+    };
+
+    const biggestWeakness = Object.keys(weaknessScores).reduce((a, b) =>
+      weaknessScores[a] > weaknessScores[b] ? a : b,
+    );
+
+    const highestScore = weaknessScores[biggestWeakness];
+
+    if (highestScore < 2) {
+      return null;
+    }
+
+    setCandidateProfile((prev) => ({
+      ...prev,
+      adaptiveQuestionAsked: true,
+    }));
+
+    return await generateBehavioralAdaptiveQuestion(biggestWeakness);
   };
   const evaluateBehavioralAnswer = async () => {
     try {

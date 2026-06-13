@@ -197,17 +197,31 @@ def generate_follow_up_question(
     return parsed_reponse
 
 def generate_adaptive_question(
-        weaknesses: int
+    weakness_type: str,
+    weaknesses: list
 ):
     prompt = f"""
     You are a senior interviewer.
+
+    Primary Weakness Category:
+
+    {weakness_type}
 
     Candidate Weaknesses:
 
     {weaknesses}
 
     Generate ONE behavioral interview question
-    that helps evaluate or improve the weakest area.
+    that helps evaluate the candidate in the
+    specified weakness category.
+
+    If the weakness category is:
+
+    - leadership -> ask a leadership-focused question
+    - communication -> ask a communication-focused question
+    - confidence -> ask a confidence-focused question
+
+    Do not ask generic behavioral questions.
 
     Return valid JSON only:
 
@@ -217,17 +231,23 @@ def generate_adaptive_question(
     """
 
     response = client.chat.completions.create(
-    model="openai/gpt-3.5-turbo",
-    max_tokens=150,
-    messages=[
-        {
-            "role": "user",
-            "content": prompt
-        }
-    ]
-)
+        model="openai/gpt-3.5-turbo",
+        max_tokens=150,
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
+    )
 
-    response_text = response.choices[0].message.content
+    response_text = (
+        response.choices[0]
+        .message.content
+    )
+
+    print("RAW RESPONSE:")
+    print(response_text)
 
     parsed_response = json.loads(
         response_text
